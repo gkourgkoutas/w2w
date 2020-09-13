@@ -2,18 +2,17 @@ use std::fs::*;
 use std::io::*;
 use structopt::StructOpt;
 
-/// Commandline Struct
-/// Defines parameters to use
+/// CLI Tool to generate wordlists based on wikipedia articles
 #[derive(StructOpt, Debug)]
-#[structopt(name = "CLI")]
+#[structopt(name = "w2w")]
 struct Cli {
     // Search
-    /// Set the keyword to search wikipedia for
+    /// Search wikipedia by keyword
     #[structopt(short, long)]
     search: String,
     // Language
-    /// Set the languages to use for wikipedia pages
-    #[structopt(short = "l", long, default_value = "de")]
+    /// Set the article language
+    #[structopt(short = "l", long, default_value = "en")]
     lang: String,
     // Output
     /// Outputfile
