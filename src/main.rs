@@ -34,9 +34,9 @@ fn wiki_search(keyword: String) -> String {
 // Create Wikipedia wordlist
 // String, String -> File
 // Gets the wikipedia content, creates a wordlist
-fn create_wordlist(content: String, outfile: String) {
+fn create_wordlist(content: String, outfile: String){
     // Create new wordlist file in current directory
-    create_output_file(outfile.to_string()).expect("Couldn't create file");
+    //create_output_file(outfile.to_string());
     for word in content.split_whitespace() {
         if word.len() >= 5 && !word.contains('\''){
             let word = word.to_string() + "\n";
