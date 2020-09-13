@@ -1,5 +1,6 @@
 # Wikipedia to Wordlist
 A small tool written in rust to create wordlists based on wikipedia articles.
+
 ![GitHub](https://img.shields.io/github/license/gkourgkoutas/w2w) ![Rustversion](https://img.shields.io/badge/rustc-1.46-red)
 ### Usage
 ```sh
@@ -22,3 +23,6 @@ OPTIONS:
 ```sh
 $ ./w2w -s "John Titor" -o ~/Path_to_outputfile/wordlist.txt
 ```
+
+### Contribution
+Feel free to contribute! If you find a bug, want to add a feature or something else: Submit a pull request.
