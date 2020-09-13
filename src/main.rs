@@ -1,5 +1,6 @@
 use std::fs::*;
 use std::io::*;
+use std::path::Path;
 use structopt::StructOpt;
 
 /// CLI Tool to generate wordlists based on wikipedia articles
@@ -25,7 +26,6 @@ struct Cli {
 // Gets a keyword and returns the wikipedia page
 fn wiki_search(keyword: String) -> String {
     let wiki = wikipedia::Wikipedia::<wikipedia::http::default::Client>::default();
-    // TODO: If page does not exist -> error or suggestion
     let page = wiki.page_from_title(keyword);
     let content = page.get_content().unwrap();
     return content;
@@ -36,32 +36,46 @@ fn wiki_search(keyword: String) -> String {
 // Gets the wikipedia content, creates a wordlist
 fn create_wordlist(content: String, outfile: String) {
     // Create new wordlist file in current directory
-    create_output_file(outfile.to_string()).expect("Couldn't create file");
-    for word in content.split_whitespace() {
-        if word.len() >= 5 && !word.contains('\''){
-            let word = word.to_string() + "\n";
+    let wordlist = content.split_whitespace();
+
+      for word in wordlist {
+        if word.len() >= 5 && 
+        (!word.contains('\'') || !word.contains(',') || !word.contains('\"') || !word.contains('.')){
+            let word = word.to_string() + "\n"; 
             edit_output_file(word.to_string(), outfile.to_string());
         }
     }
 }
 
 // Helper function: Create new wordlist file
-fn create_output_file(outfile: String) -> std::io::Result<()> {
-    File::create(outfile).expect_err("No such file or directory");
-    Ok(())
+fn create_output_file(path: String){
+    let path = Path::new(&path);
+    let display = path.display();
+
+    match File::create(&path){
+        Err(why) => panic!("couldn't open {}: {}", display, why),
+        Ok(file) => file,
+    };
 }
 
 // Helper function: Edit wordlist file
 fn edit_output_file(word: String, outfile: String) {
+    let display_path = Path::new(&outfile).display();
+    
     let mut file = OpenOptions::new()
-        .append(true)
-        .open(outfile.to_string())
-        .expect("No such file or directory");
-    file.write_all(word.as_bytes()).expect("write failed");
+         .append(true)
+         .open(outfile.to_string())
+         .expect("No such file or directory");
+    
+    match file.write_all(word.as_bytes()){
+        Err(why) => panic!("couldn't write to {}: {}", display_path, why),
+        Ok(file) => file,
+    };
 }
 
 fn main() {
     let args = Cli::from_args();
     let wiki_content = wiki_search(args.search);
-    create_wordlist(wiki_content, args.output);
+    create_output_file(args.output.clone());
+    create_wordlist(wiki_content, args.output.clone());
 }
