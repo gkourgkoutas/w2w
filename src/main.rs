@@ -60,6 +60,14 @@ fn edit_output_file(word: String, outfile: String) {
     file.write_all(word.as_bytes()).expect("write failed");
 }
 
+// Get random wiki page
+fn wiki_random() -> String {
+    let wiki = wikipedia::Wikipedia::<wikipedia::http::default::Client>::default();
+    let random_page_title = wiki.random().unwrap();
+    let content = wiki_search(random_page_title.unwrap());
+    return content;
+}
+
 fn main() {
     let args = Cli::from_args();
     let wiki_content = wiki_search(args.search);
