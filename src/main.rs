@@ -5,7 +5,6 @@ use structopt::StructOpt;
 
 fn main() {
     let args = Cli::from_args();
-    
     let content = Wikipedia::wiki_search(args.search);
     Wikipedia::wiki_random();
     Wordlist::create_output_file(&args.output);
@@ -62,15 +61,14 @@ impl Wordlist {
     fn create_wordlist(content: &str, outfile: String) {
         // Create new wordlist file in current directory
         let wordlist = content.split_whitespace();
+        let reg = regex::Regex::new(r"[^0-9a-zA-Z]+").unwrap();
 
         for word in wordlist {
-            if word.len() >= 5
-                && (!word.contains('\'')
-                    || !word.contains(',')
-                    || !word.contains('\"')
-                    || !word.contains('.'))
-            {
-                let word = word.to_string() + "\n";
+            if reg.is_match(word) && (word.len() >= 5) {
+                let word = reg.replace_all(word, "") + "\n";
+                Wordlist::edit_output_file(&word, &outfile);
+            } else if word.len() <= 4 {
+                let word = word.replace(word, "");
                 Wordlist::edit_output_file(&word, &outfile);
             }
         }

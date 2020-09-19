@@ -9,4 +9,4 @@ edition = "2018"
 [dependencies]
 structopt = "0.3.17"
 wikipedia = "0.3.4"
-# array_tool = "1.0.3"
+regex = "1"
