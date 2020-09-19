@@ -1,14 +1,21 @@
 use std::fs::*;
 use std::io::*;
-use std::path::Path;
+use std::path::PathBuf;
 use structopt::StructOpt;
 
 fn main() {
     let args = Cli::from_args();
     let content = Wikipedia::wiki_search(args.search);
     Wikipedia::wiki_random();
-    Wordlist::create_output_file(&args.output);
-    Wordlist::create_wordlist(&content, args.output);
+    let mut wordlist = match Wordlist::new(&args.output) {
+        Ok(wordlist) => wordlist,
+        Err(e) => panic!("couldn't open {}: {}", &args.output, e),
+    };
+
+    match wordlist.write_contents(&content) {
+        Ok(()) => {}
+        Err(e) => panic!("couldn't write to {}: {}", &args.output, e),
+    };
 }
 
 /// CLI Tool to generate wordlists based on wikipedia articles
@@ -53,49 +60,48 @@ impl Wikipedia {
     }
 }
 
-struct Wordlist {}
+struct Wordlist {
+    writer: BufWriter<File>,
+}
+
 impl Wordlist {
     // Create Wikipedia wordlist
     // String, String -> File
     // Gets the wikipedia content, creates a wordlist
-    fn create_wordlist(content: &str, outfile: String) {
+    fn new(path_str: &str) -> std::io::Result<Wordlist> {
         // Create new wordlist file in current directory
-        let wordlist = content.split_whitespace();
+
+        let path = PathBuf::from(&path_str);
+        let file = OpenOptions::new().create(true).write(true).open(path)?;
+        let writer = BufWriter::new(file);
+
+        Ok(Wordlist { writer })
+    }
+
+    fn write_contents(&mut self, content: &str) -> std::io::Result<()> {
+        let words = content.split_whitespace();
         let reg = regex::Regex::new(r"[^0-9a-zA-Z]+").unwrap();
 
-        for word in wordlist {
+        for word in words {
             if reg.is_match(word) && (word.len() >= 5) {
                 let word = reg.replace_all(word, "") + "\n";
-                Wordlist::edit_output_file(&word, &outfile);
+                self.write(&word.as_bytes())?;
             } else if word.len() <= 4 {
                 let word = word.replace(word, "");
-                Wordlist::edit_output_file(&word, &outfile);
+                self.write(&word.as_bytes())?;
             }
         }
+
+        Ok(())
+    }
+}
+
+impl Write for Wordlist {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.writer.write(buf)
     }
 
-    // Helper function: Create new wordlist file
-    fn create_output_file(path: &str) {
-        let path = Path::new(&path);
-        let display = path.display();
-
-        match File::create(&path) {
-            Err(why) => panic!("couldn't open {}: {}", display, why),
-            Ok(file) => file,
-        };
-    }
-
-    // Helper function: Edit wordlist file
-    fn edit_output_file(word: &str, outfile: &str) {
-        let display_path = Path::new(&outfile).display();
-        let mut file = OpenOptions::new()
-            .append(true)
-            .open(outfile)
-            .expect("No such file or directory");
-
-        match file.write_all(word.as_bytes()) {
-            Err(why) => panic!("couldn't write to {}: {}", display_path, why),
-            Ok(file) => file,
-        };
+    fn flush(&mut self) -> Result<()> {
+        self.writer.flush()
     }
 }
