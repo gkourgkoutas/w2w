@@ -97,16 +97,18 @@ impl Wordlist {
         let words = content.split_whitespace();
         let reg = regex::Regex::new(r"[^0-9a-zA-Z]+").unwrap();
 
+        let mut sorted_list: Vec<String> = Vec::new();
         for word in words {
             if reg.is_match(word) && (word.len() >= 5) {
-                let word = reg.replace_all(word, "") + "\n";
-                self.write(&word.as_bytes())?;
-            } else if word.len() <= 4 {
-                let word = word.replace(word, "");
-                self.write(&word.as_bytes())?;
+                let cont = reg.replace_all(word, "") + "\n";
+                sorted_list.push(cont.to_string());
             }
         }
-
+        sorted_list.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        sorted_list.dedup_by(|b, a| a.eq_ignore_ascii_case(b));
+        for word in sorted_list {
+            self.write(&word.as_bytes())?;
+        }
         Ok(())
     }
 }
