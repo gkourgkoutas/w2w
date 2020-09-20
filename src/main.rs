@@ -5,17 +5,32 @@ use structopt::StructOpt;
 
 fn main() {
     let args = Cli::from_args();
-    let content = Wikipedia::wiki_search(args.search);
-    Wikipedia::wiki_random();
-    let mut wordlist = match Wordlist::new(&args.output) {
-        Ok(wordlist) => wordlist,
-        Err(e) => panic!("couldn't open {}: {}", &args.output, e),
-    };
+    
+    // if random is set create wordlistfile
+    if args.random {
+        let content = Wikipedia::wiki_search(Wikipedia::wiki_random());
+        let mut wordlist = match Wordlist::new(&args.output.clone().unwrap()) {
+            Ok(wordlist) => wordlist,
+            Err(e) => panic!("couldn't open {}: {}", &args.output.clone().unwrap(), e),
+        };
+        match wordlist.write_contents(&content) {
+            Ok(()) => {}
+            Err(e) => panic!("couldn't write to {}: {}", &args.output.unwrap(), e),
+        };
+        println!("[+] wordlist generated");
+    } else {
+        let content = Wikipedia::wiki_search(args.search.unwrap().to_string());
+        let mut wordlist = match Wordlist::new(&args.output.clone().unwrap()) {
+            Ok(wordlist) => wordlist,
+            Err(e) => panic!("couldn't open {}: {}", &args.output.clone().unwrap(), e),
+        };
 
-    match wordlist.write_contents(&content) {
-        Ok(()) => {}
-        Err(e) => panic!("couldn't write to {}: {}", &args.output, e),
-    };
+        match wordlist.write_contents(&content) {
+            Ok(()) => {}
+            Err(e) => panic!("couldn't write to {}: {}", &args.output.unwrap(), e),
+        };
+        println!("[+] wordlist generated");
+    }
 }
 
 /// CLI Tool to generate wordlists based on wikipedia articles
@@ -25,7 +40,7 @@ struct Cli {
     // Search
     /// Search wikipedia by keyword
     #[structopt(short, long)]
-    search: String,
+    search: Option<String>,
     // Language
     /// Set the article language
     #[structopt(short = "l", long, default_value = "en")]
@@ -33,11 +48,11 @@ struct Cli {
     // Random
     /// Get random article
     #[structopt(short = "r", long)]
-    random: Option<bool>,
+    random: bool,
     // Output
     /// Outputfile
     #[structopt(short, long)]
-    output: String,
+    output: Option<String>,
 }
 
 struct Wikipedia {}
@@ -53,10 +68,10 @@ impl Wikipedia {
     }
 
     // Get random wiki page
-    fn wiki_random() {
+    fn wiki_random() -> String {
         let wiki = wikipedia::Wikipedia::<wikipedia::http::default::Client>::default();
-        let random_title = wiki.random().unwrap().take().unwrap().to_string();
-        println!("{}", random_title);
+        let random_title = wiki.random().unwrap().take().unwrap();
+        return random_title;
     }
 }
 
