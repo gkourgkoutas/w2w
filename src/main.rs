@@ -13,24 +13,24 @@ fn main() {
             Ok(wordlist) => wordlist,
             Err(e) => panic!("couldn't open {}: {}", &args.output.clone().unwrap(), e),
         };
+    
         match wordlist.write_contents(&content) {
             Ok(()) => {}
             Err(e) => panic!("couldn't write to {}: {}", &args.output.unwrap(), e),
         };
-        println!("[+] wordlist generated");
     } else {
         let content = Wikipedia::wiki_search(args.search.unwrap().to_string());
         let mut wordlist = match Wordlist::new(&args.output.clone().unwrap()) {
             Ok(wordlist) => wordlist,
             Err(e) => panic!("couldn't open {}: {}", &args.output.clone().unwrap(), e),
         };
-
+    
         match wordlist.write_contents(&content) {
             Ok(()) => {}
             Err(e) => panic!("couldn't write to {}: {}", &args.output.unwrap(), e),
         };
-        println!("[+] wordlist generated");
     }
+    println!("[+] wordlist generated");
 }
 
 /// CLI Tool to generate wordlists based on wikipedia articles
