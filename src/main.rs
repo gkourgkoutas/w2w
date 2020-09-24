@@ -1,36 +1,26 @@
 use std::fs::*;
 use std::io::*;
+use std::{fmt,error,result};
 use std::path::PathBuf;
 use structopt::StructOpt;
 
-fn main() {
+// custom Result type
+type Result<T> = result::Result<T, Box<dyn error::Error>>;
+
+fn main() -> Result<()>{
     let args = Cli::from_args();
     
-    // if random is set create wordlistfile
-    if args.random {
-        let content = Wikipedia::wiki_search(Wikipedia::wiki_random());
-        let mut wordlist = match Wordlist::new(&args.output.clone().unwrap()) {
-            Ok(wordlist) => wordlist,
-            Err(e) => panic!("couldn't open {}: {}", &args.output.clone().unwrap(), e),
-        };
-    
-        match wordlist.write_contents(&content) {
-            Ok(()) => {}
-            Err(e) => panic!("couldn't write to {}: {}", &args.output.unwrap(), e),
-        };
+    let content = if args.random {
+        Wikipedia::search(Wikipedia::random_search()?)?
     } else {
-        let content = Wikipedia::wiki_search(args.search.unwrap().to_string());
-        let mut wordlist = match Wordlist::new(&args.output.clone().unwrap()) {
-            Ok(wordlist) => wordlist,
-            Err(e) => panic!("couldn't open {}: {}", &args.output.clone().unwrap(), e),
-        };
-    
-        match wordlist.write_contents(&content) {
-            Ok(()) => {}
-            Err(e) => panic!("couldn't write to {}: {}", &args.output.unwrap(), e),
-        };
-    }
+        Wikipedia::search(args.search.unwrap())?
+    };
+
+    Wordlist::new(&args.output)?
+        .write_contents(&content)?;
+
     println!("[+] wordlist generated");
+    Ok(())
 }
 
 /// CLI Tool to generate wordlists based on wikipedia articles
@@ -39,7 +29,7 @@ fn main() {
 struct Cli {
     // Search
     /// Search wikipedia by keyword
-    #[structopt(short, long)]
+    #[structopt(short, long, required_unless("random"))]
     search: Option<String>,
     // Language
     /// Set the article language
@@ -47,31 +37,45 @@ struct Cli {
     lang: String,
     // Random
     /// Get random article
-    #[structopt(short = "r", long)]
+    #[structopt(short = "r", long, conflicts_with("search"))]
     random: bool,
     // Output
     /// Outputfile
     #[structopt(short, long)]
-    output: Option<String>,
+    output: String,
 }
+
+// Custom Error because Wikipedia doesn't implement std::error::Error
+#[derive(Debug)]
+struct WikipediaError(wikipedia::Error);
+impl fmt::Display for WikipediaError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+impl error::Error for WikipediaError {}
+
+impl std::convert::From<wikipedia::Error> for WikipediaError {
+    fn from(e: wikipedia::Error) -> WikipediaError {
+        WikipediaError(e)
+    }
+}
+
+type WikipediaResult<T> = result::Result<T, WikipediaError>;
 
 struct Wikipedia {}
 impl Wikipedia {
     // Search Wikipedia
-    // String -> String
-    // Gets a keyword and returns the wikipedia page
-    fn wiki_search(search: String) -> String {
+    fn search(search: String) -> WikipediaResult<String> {
         let wiki = wikipedia::Wikipedia::<wikipedia::http::default::Client>::default();
         let page = wiki.page_from_title(search);
-        let content = page.get_content().unwrap();
-        return content;
+        Ok(page.get_content()?)
     }
 
     // Get random wiki page
-    fn wiki_random() -> String {
+    fn random_search() -> WikipediaResult<String> {
         let wiki = wikipedia::Wikipedia::<wikipedia::http::default::Client>::default();
-        let random_title = wiki.random().unwrap().take().unwrap();
-        return random_title;
+        Ok(wiki.random()?.unwrap_or("".to_string()))
     }
 }
 
@@ -81,21 +85,17 @@ struct Wordlist {
 
 impl Wordlist {
     // Create Wikipedia wordlist
-    // String, String -> File
-    // Gets the wikipedia content, creates a wordlist
-    fn new(path_str: &str) -> std::io::Result<Wordlist> {
-        // Create new wordlist file in current directory
-
+    fn new(path_str: &str) -> Result<Wordlist> {
         let path = PathBuf::from(&path_str);
         let file = OpenOptions::new().create(true).write(true).open(path)?;
         let writer = BufWriter::new(file);
 
         Ok(Wordlist { writer })
     }
-
-    fn write_contents(&mut self, content: &str) -> std::io::Result<()> {
+    // Sort wordlist + write content
+    fn write_contents(&mut self, content: &str) -> Result<()> {
         let words = content.split_whitespace();
-        let reg = regex::Regex::new(r"[^0-9a-zA-Z]+").unwrap();
+        let reg = regex::Regex::new(r"[^0-9a-zA-Z]+")?;
 
         let mut sorted_list: Vec<String> = Vec::new();
         for word in words {
@@ -104,7 +104,7 @@ impl Wordlist {
                 sorted_list.push(cont.to_string());
             }
         }
-        sorted_list.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        sorted_list.sort();
         sorted_list.dedup_by(|b, a| a.eq_ignore_ascii_case(b));
         for word in sorted_list {
             self.write(&word.as_bytes())?;
@@ -118,7 +118,7 @@ impl Write for Wordlist {
         self.writer.write(buf)
     }
 
-    fn flush(&mut self) -> Result<()> {
+    fn flush(&mut self) -> std::io::Result<()> {
         self.writer.flush()
     }
 }
