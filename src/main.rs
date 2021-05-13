@@ -13,13 +13,17 @@ fn main() -> Result<()>{
     let content = if args.random {
         Wikipedia::search(Wikipedia::random_search()?)?
     } else {
+        if args.lang != "en" {
+            Wikipedia::language_search(args.search.unwrap(),args.lang)?
+        }else{
         Wikipedia::search(args.search.unwrap())?
+        }
     };
-
+    
     Wordlist::new(&args.output)?
         .write_contents(&content)?;
 
-    println!("[+] wordlist generated");
+    println!("[+] Wordlist generated");
     Ok(())
 }
 
@@ -69,13 +73,25 @@ impl Wikipedia {
     fn search(search: String) -> WikipediaResult<String> {
         let wiki = wikipedia::Wikipedia::<wikipedia::http::default::Client>::default();
         let page = wiki.page_from_title(search);
+        println!("[*] Searching Wikipedia");
         Ok(page.get_content()?)
     }
 
     // Get random wiki page
     fn random_search() -> WikipediaResult<String> {
         let wiki = wikipedia::Wikipedia::<wikipedia::http::default::Client>::default();
+        println!("[*] Using random search");
         Ok(wiki.random()?.unwrap_or("".to_string()))
+    }
+    
+    // search in specific language
+    fn language_search(search:String, language: String) -> WikipediaResult<String>{
+        let mut wiki = wikipedia::Wikipedia::<wikipedia::http::default::Client>::default();
+        let base = "https://".to_owned() + &language.to_lowercase() + ".wikipedia.org/w/api.php";
+        wiki.set_base_url(&base);
+        println!("[*] Searching Wikipedia with language: {:}", language.to_uppercase());
+        let page = wiki.page_from_title(search);
+        Ok(page.get_content()?)
     }
 }
 
