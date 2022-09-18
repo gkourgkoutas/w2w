@@ -1,10 +1,10 @@
 # Wikipedia to Wordlist
 A small tool written in rust to create wordlists based on wikipedia articles.
 
-![GitHub](https://img.shields.io/github/license/gkourgkoutas/w2w) ![Rustversion](https://img.shields.io/badge/rustc-1.46-red)
+![GitHub](https://img.shields.io/github/license/gkourgkoutas/w2w) ![Rustversion](https://img.shields.io/badge/rustc-1.63.0-red)
 ### Usage
 ```sh
-w2w 0.1.0
+w2w 0.1.3
 CLI Tool to generate wordlists based on wikipedia articles
 
 USAGE:
