@@ -130,7 +130,7 @@ impl Wikipedia {
         let wiki = wikipedia::Wikipedia::<wikipedia::http::default::Client>::default();
         println!("[*] Searching Wikipedia");
         let search_results = wiki.search(&search)?;
-        Ok(search_results.results)
+        Ok(search_results)
     }
 
     // Get random wiki page
@@ -147,7 +147,7 @@ impl Wikipedia {
         wiki.set_base_url(&base);
         println!("[*] Searching Wikipedia with language: {:}", language.to_uppercase());
         let search_results = wiki.search(&search)?;
-        Ok(search_results.results)
+        Ok(search_results)
     }
 }
 
