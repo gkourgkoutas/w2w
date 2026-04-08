@@ -166,14 +166,13 @@ impl Wordlist {
     }
     // Sort wordlist + write content
     fn write_contents(&mut self, content: &str, count: Option<usize>) -> Result<()> {
-        let words = content.split_whitespace();
-        let reg = regex::Regex::new(r"[^0-9a-zA-Z]+")?;
+        let reg = regex::Regex::new(r"[\p{Alphabetic}\p{Decimal_Number}]+")?;
 
         let mut sorted_list: Vec<String> = Vec::new();
-        for word in words {
-            if reg.is_match(word) && (word.len() >= 5) {
-                let cont = reg.replace_all(word, "") + "\n";
-                sorted_list.push(cont.to_string());
+        for cap in reg.find_iter(content) {
+            let word = cap.as_str();
+            if word.chars().count() >= 5 {
+                sorted_list.push(format!("{}\n", word));
             }
         }
         sorted_list.sort();
@@ -234,6 +233,37 @@ mod tests {
         file.read_to_string(&mut actual_output)?;
 
         fs::remove_file(test_file_path)?; // Clean up
+
+        assert_eq!(actual_output, expected_output);
+        Ok(())
+    }
+
+    #[test]
+    fn test_unicode_and_splitting() -> Result<()> {
+        let test_file_path = "test_unicode.txt";
+        let content = "Amérindien l'entreprise";
+
+        // Currently:
+        // "Amérindien" -> matches reg because of 'é' -> reg.replace_all("Amérindien", "") -> "Amrindien"
+        // "l'entreprise" -> matches reg because of "'" -> reg.replace_all("l'entreprise", "") -> "lentreprise"
+
+        // Expected behavior after fix:
+        // "Amérindien" -> "Amérindien"
+        // "l'entreprise" -> "entreprise" (because 'l' is < 5 chars)
+
+        let expected_output = "Amérindien\nentreprise\n";
+
+        {
+            let mut wordlist = Wordlist::new(test_file_path)?;
+            wordlist.write_contents(content, None)?;
+            wordlist.flush()?;
+        }
+
+        let mut file = File::open(test_file_path)?;
+        let mut actual_output = String::new();
+        file.read_to_string(&mut actual_output)?;
+
+        fs::remove_file(test_file_path)?;
 
         assert_eq!(actual_output, expected_output);
         Ok(())
